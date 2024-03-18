@@ -31,9 +31,4 @@
 *.out
 *.app
 
-
-examples/sections
-examples/segments
-examples/symbols
-examples/relocations
-examples/tests/test1
+out/*

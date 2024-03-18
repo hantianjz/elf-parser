@@ -1,5 +1,6 @@
 # elf-parser
 Lightweight elf binary parser with no external dependencies - Sections, Symbols, Relocations, Segments 
+Supporting both ELF32 and ELF64 running on MacOS and Linux.
 
 # Required libraries
 No dependencies

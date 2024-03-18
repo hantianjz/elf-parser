@@ -1,0 +1,13 @@
+executable("elf_walker") {
+  sources = [
+    "elf.cc",
+    "elf32.cc",
+    "elf64.cc",
+    "elf_parser.cc",
+    "elf_walker.cc",
+  ]
+}
+
+group("all") {
+  deps = [ "//:elf_walker" ]
+}

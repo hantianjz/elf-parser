@@ -1,0 +1,40 @@
+config("compiler_defaults") {
+  cflags_c = [
+    "-fexceptions",
+    "-std=gnu11",
+  ]
+  cflags_cc = [ "-std=gnu++11" ]
+}
+
+config("strict_warning") {
+  cflags = [
+    "-Wall",
+    "-Werror",
+    "-Wextra",
+    "-Wpedantic",
+    "-Wvla",
+    "-Wshadow",
+    "-Wpointer-arith",
+    "-Wwrite-strings",
+    "-Winit-self",
+    "-Wformat=2",
+    "-Wswitch-enum",
+    "-Wswitch-default",
+    "-Wconversion",
+    "-Wsign-conversion",
+    "-Wreturn-type",
+    "-Wdouble-promotion",
+  ]
+  cflags_c = [ "-Wstrict-prototypes" ]
+}
+
+config("dbg") {
+  cflags = [
+    "-Os",
+    "-g",
+  ]
+}
+
+config("host_executable_ldconfig") {
+  ldflags = [ "-fPIC" ]
+}

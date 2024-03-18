@@ -1,0 +1,103 @@
+template("toolchain_cc") {
+  if (defined(invoker.compiler)) {
+    if (invoker.compiler == "gcc") {
+      _cc = "gcc"
+      _cxx = "g++"
+    } else if (invoker.compiler == "clang") {
+      _cc = "clang"
+      _cxx = "clang++"
+    } else {
+      assert(0, "If defined, 'compiler' must be 'clang' or 'gcc'")
+    }
+  } else {
+    _cc = "cc"
+    _cxx = "c++"
+  }
+
+  _toolchain_cflags = ""
+  if (defined(invoker.toolchain_cflags)) {
+    _toolchain_cflags += string_join(" ", invoker.toolchain_cflags)
+  }
+
+  _toolchain_cflags_c = ""
+  if (defined(invoker.toolchain_cflags_c)) {
+    _toolchain_cflags_c += string_join(" ", invoker.toolchain_cflags_c)
+  }
+
+  _toolchain_cflags_cc = ""
+  if (defined(invoker.toolchain_cflags_cc)) {
+    _toolchain_cflags_cc += string_join(" ", invoker.toolchain_cflags_cc)
+  }
+
+  _toolchain_ldflags = ""
+  if (defined(invoker.toolchain_ldflags)) {
+    _toolchain_ldflags += string_join(" ", invoker.toolchain_ldflags)
+  }
+
+  _obj_subdir = "{{target_out_dir}}/{{label_name}}"
+
+  toolchain(target_name) {
+    tool("cc") {
+      depfile = "{{output}}.d"
+      command = "${_cc} -MD -MF $depfile {{defines}} {{include_dirs}} ${_toolchain_cflags} ${_toolchain_cflags_c} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CC {{output}}"
+      outputs = [ "${_obj_subdir}/{{source_name_part}}.o" ]
+    }
+
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      command = "${_cxx} -MD -MF $depfile {{defines}} {{include_dirs}} ${_toolchain_cflags} ${_toolchain_cflags_cc} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CXX {{output}}"
+      outputs = [ "${_obj_subdir}/{{source_name_part}}.o" ]
+    }
+
+    tool("asm") {
+      depfile = "{{output}}.d"
+      command = "${_cc} -MD -MF $depfile {{defines}} {{include_dirs}} ${_toolchain_cflags} {{asmflags}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "ASM {{output}}"
+      outputs = [ "${_obj_subdir}/{{source_name_part}}.o" ]
+    }
+
+    tool("alink") {
+      rspfile = "{{output}}.rsp"
+      rspfile_content = "{{inputs}}"
+      command = "rm -f {{output}} && ar {{arflags}} -r -c -s -D {{output}} @\"$rspfile\""
+      default_output_dir = _obj_subdir
+      default_output_extension = ".a"
+      description = "AR {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
+    }
+
+    tool("solink") {
+      rspfile = "{{output}}.rsp"
+      rspfile_content = "{{inputs_newline}}"
+      command = "rm -f {{output}} && ${_cxx} -shared ${_toolchain_cflags} ${_toolchain_ldflags} {{ldflags}} -o {{output}} -Wl,--start-group \"@$rspfile\" {{libs}} -Wl,--end-group"
+      default_output_dir = _obj_subdir
+      default_output_extension = ".so"
+      description = "SO {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
+    }
+
+    tool("link") {
+      rspfile = "{{output}}.rsp"
+      rspfile_content = "{{inputs_newline}}"
+      command = "rm -f {{output}} && ${_cxx} ${_toolchain_cflags} ${_toolchain_ldflags} {{ldflags}} -o {{output}} -Wl,--start-group \"@$rspfile\" {{libs}} -Wl,--end-group"
+      default_output_dir = _obj_subdir
+      description = "LINK {{output}}"
+      outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
+    }
+
+    tool("stamp") {
+      description = "STAMP {{output}}"
+      command = "touch {{output}}"
+    }
+
+    tool("copy") {
+      description = "COPY {{source}} {{output}}"
+      command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+    }
+  }
+}

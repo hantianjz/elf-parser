@@ -1,0 +1,28 @@
+if (host_os == "mac" || host_os == "linux") {
+  _host_cflags = [
+    "-fPIC",
+    "-fvisibility=hidden",
+  ]
+  _host_cflags_c = [ "-fexceptions" ]
+  _toolchain_cflags_c = [ "-std=gnu17" ]
+  _toolchain_cflags_cc = [ "-std=gnu++20" ]
+
+  if (host_os == "mac") {
+    import("../toolchain_xcode.gni")
+    toolchain_xcode("xcode") {
+      toolchain_cflags = _host_cflags
+      toolchain_cflags_c = _toolchain_cflags_c + _host_cflags_c
+      toolchain_cflags_cc = _toolchain_cflags_cc
+    }
+  }
+
+  if (host_os == "linux") {
+    import("../toolchain_cc.gni")
+    toolchain_cc("gcc") {
+      compiler = "gcc"
+      toolchain_cflags = _host_cflags + [ "-pthread" ]
+      toolchain_cflags_c = _toolchain_cflags_c + _host_cflags_c
+      toolchain_cflags_cc = _toolchain_cflags_cc
+    }
+  }
+}
