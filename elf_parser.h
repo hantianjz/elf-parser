@@ -60,7 +60,7 @@ typedef struct segment {
 
 typedef struct symbol {
   std::string symbol_index;
-  std::intptr_t symbol_value;
+  std::uintptr_t symbol_value;
   uint64_t symbol_num = 0;
   uint64_t symbol_size = 0;
   std::string symbol_type;
@@ -77,10 +77,11 @@ typedef struct relocation {
   std::string relocation_type;
   std::string relocation_symbol_name;
   std::string relocation_section_name;
-  std::intptr_t relocation_plt_address;
+  std::uintptr_t relocation_plt_address;
 } relocation_t;
 
 std::string get_e_type_str(unsigned et);
+std::string get_machine_str(unsigned em);
 std::string get_section_type(unsigned tt);
 
 std::string get_segment_type(uint32_t &seg_type);
@@ -91,66 +92,48 @@ std::string get_symbol_bind(uint8_t &sym_bind);
 std::string get_symbol_visibility(uint8_t &sym_vis);
 std::string get_symbol_index(uint16_t &sym_idx);
 
+std::string get_relocation_type(uint32_t &rela_type);
 std::string get_relocation_type(uint64_t &rela_type);
-std::intptr_t get_rel_symbol_value(uint64_t &sym_idx,
-                                   std::vector<symbol_t> &syms);
+std::uintptr_t get_rel_symbol_value(uint32_t &sym_idx,
+                                    std::vector<symbol_t> &syms);
+std::uintptr_t get_rel_symbol_value(uint64_t &sym_idx,
+                                    std::vector<symbol_t> &syms);
+std::string get_rel_symbol_name(uint32_t &sym_idx, std::vector<symbol_t> &syms);
 std::string get_rel_symbol_name(uint64_t &sym_idx, std::vector<symbol_t> &syms);
 
-class Elf {
+class Elf32 {
 public:
-  Elf(uint8_t *m_mmap_program);
-
-  void print_header();
+  Elf32(uint8_t *m_mmap_program);
   std::vector<section_t> get_sections();
   std::vector<segment_t> get_segments();
   std::vector<symbol_t> get_symbols();
   std::vector<relocation_t> get_relocations();
 
+  void print_header();
+  void print_section_headers();
+  void print_program_hdrs();
+  Elf32_Ehdr *get_header();
+
 protected:
   uint8_t *m_mmap_program;
-};
 
-class Elf64 : public Elf {
-public:
-  using Elf::Elf;
-  using Elf::get_relocations;
-  using Elf::get_sections;
-  using Elf::get_segments;
-  using Elf::get_symbols;
-
-  virtual void print_header();
-  Elf64_Ehdr *get_header();
-};
-
-class Elf32 : public Elf {
-public:
-  using Elf::Elf;
-  using Elf::get_relocations;
-  using Elf::get_sections;
-  using Elf::get_segments;
-  using Elf::get_symbols;
-
-  void print_header();
-  Elf32_Ehdr *get_header();
+  void print_section_header(section_t &sec);
+  void print_program_hdr(segment_t &seg);
 };
 
 class Elf_parser {
 public:
   Elf_parser(std::string &program_path);
 
-  std::vector<section_t> get_sections();
-  std::vector<segment_t> get_segments();
-  std::vector<symbol_t> get_symbols();
-  std::vector<relocation_t> get_relocations();
-
   void print_header();
+  void print_section_headers();
+  void print_program_hdrs();
 
 private:
   uint8_t *load_memory_map();
   unsigned verify_identity(Elf64_Ehdr *header);
 
   Elf32 *elf32;
-  Elf64 *elf64;
   std::string m_program_path;
 };
 }; // namespace elf_parser

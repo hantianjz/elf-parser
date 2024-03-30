@@ -1,21 +1,59 @@
 #include "elf_parser.h"
 using namespace elf_parser;
 
+Elf32::Elf32(uint8_t *m_program) : m_mmap_program{m_program} {
+  (void)m_mmap_program;
+}
+
 Elf32_Ehdr *Elf32::get_header() { return (Elf32_Ehdr *)m_mmap_program; }
 
 void Elf32::print_header() {
   auto *header = get_header();
-  printf("%s %d %d\n", get_e_type_str(header->e_type).c_str(),
-         header->e_machine, header->e_version);
+  printf("%s %s %d\n", get_e_type_str(header->e_type).c_str(),
+         get_machine_str(header->e_machine).c_str(), header->e_version);
+
+  printf("entry: 0x%08x; phoff: 0x%08x; shoff: 0x%08x\n", header->e_entry,
+         header->e_phoff, header->e_shoff);
+  printf("ehdr size: 0x%04x; phent size: 0x%04x; phnum: 0x%04x; shent "
+         "size:0x%04x; shnum: 0x%04x shstrndx: 0x%04x\n",
+         header->e_ehsize, header->e_phentsize, header->e_phnum,
+         header->e_shentsize, header->e_shnum, header->e_shstrndx);
 }
 
-#if 0
+void Elf32::print_section_header(section_t &sec) {
+  printf("%02d; %s;%s%08lx %08lx %08lx %s\n", sec.section_index,
+         sec.section_name.c_str(), "\t\t", sec.section_size, sec.section_offset,
+         sec.section_addr, sec.section_type.c_str());
+}
+
+void Elf32::print_section_headers() {
+  std::vector<section_t> sections = get_sections();
+  for (auto &sec : sections) {
+    print_section_header(sec);
+  }
+}
+
+void Elf32::print_program_hdr(segment_t &seg) {
+  printf("%s off 0x%08llx vaddr 0x%08llx paddr 0x%08llx align 2**%d\n",
+         seg.segment_type.c_str(), seg.segment_offset, seg.segment_virtaddr,
+         seg.segment_physaddr, __builtin_ffs((int)seg.segment_align) - 1);
+  printf("\t filesz 0x%08llx memsz 0x%08llx flags %s\n", seg.segment_filesize,
+         seg.segment_memsize, seg.segment_flags.c_str());
+}
+
+void Elf32::print_program_hdrs() {
+  std::vector<segment_t> segments = get_segments();
+  for (auto &seg : segments) {
+    print_program_hdr(seg);
+  }
+}
+
 std::vector<section_t> Elf32::get_sections() {
-  Elf64_Ehdr *ehdr = (Elf64_Ehdr *)m_mmap_program;
-  Elf64_Shdr *shdr = (Elf64_Shdr *)(m_mmap_program + ehdr->e_shoff);
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr *)m_mmap_program;
+  Elf32_Shdr *shdr = (Elf32_Shdr *)(m_mmap_program + ehdr->e_shoff);
   int shnum = ehdr->e_shnum;
 
-  Elf64_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
+  Elf32_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)m_mmap_program + sh_strtab->sh_offset;
 
   std::vector<section_t> sections;
@@ -36,12 +74,12 @@ std::vector<section_t> Elf32::get_sections() {
 }
 
 std::vector<segment_t> Elf32::get_segments() {
-  Elf64_Ehdr *ehdr = (Elf64_Ehdr *)m_mmap_program;
-  Elf64_Phdr *phdr = (Elf64_Phdr *)(m_mmap_program + ehdr->e_phoff);
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr *)m_mmap_program;
+  Elf32_Phdr *phdr = (Elf32_Phdr *)(m_mmap_program + ehdr->e_phoff);
   int phnum = ehdr->e_phnum;
 
-  Elf64_Shdr *shdr = (Elf64_Shdr *)(m_mmap_program + ehdr->e_shoff);
-  Elf64_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
+  Elf32_Shdr *shdr = (Elf32_Shdr *)(m_mmap_program + ehdr->e_shoff);
+  Elf32_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
   const char *const sh_strtab_p = (char *)m_mmap_program + sh_strtab->sh_offset;
   (void)sh_strtab_p;
 
@@ -66,8 +104,8 @@ std::vector<symbol_t> Elf32::get_symbols() {
   std::vector<section_t> secs = get_sections();
 
   // get headers for offsets
-  Elf64_Ehdr *ehdr = (Elf64_Ehdr *)m_mmap_program;
-  Elf64_Shdr *shdr = (Elf64_Shdr *)(m_mmap_program + ehdr->e_shoff);
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr *)m_mmap_program;
+  Elf32_Shdr *shdr = (Elf32_Shdr *)(m_mmap_program + ehdr->e_shoff);
   (void)shdr;
 
   // get strtab
@@ -94,8 +132,8 @@ std::vector<symbol_t> Elf32::get_symbols() {
         (sec.section_type != "SHT_DYNSYM"))
       continue;
 
-    auto total_syms = sec.section_size / sizeof(Elf64_Sym);
-    auto syms_data = (Elf64_Sym *)(m_mmap_program + sec.section_offset);
+    auto total_syms = sec.section_size / sizeof(Elf32_Sym);
+    auto syms_data = (Elf32_Sym *)(m_mmap_program + sec.section_offset);
 
     for (size_t i = 0; i < total_syms; ++i) {
       symbol_t symbol;
@@ -124,7 +162,7 @@ std::vector<relocation_t> Elf32::get_relocations() {
   auto secs = get_sections();
   auto syms = get_symbols();
 
-  int plt_entry_size = 0;
+  size_t plt_entry_size = 0;
   uint64_t plt_vma_address = 0;
 
   for (auto &sec : secs) {
@@ -141,14 +179,14 @@ std::vector<relocation_t> Elf32::get_relocations() {
     if (sec.section_type != "SHT_RELA")
       continue;
 
-    auto total_relas = sec.section_size / sizeof(Elf64_Rela);
-    auto relas_data = (Elf64_Rela *)(m_mmap_program + sec.section_offset);
+    auto total_relas = sec.section_size / sizeof(Elf32_Rela);
+    auto relas_data = (Elf32_Rela *)(m_mmap_program + sec.section_offset);
 
-    for (int i = 0; i < total_relas; ++i) {
+    for (size_t i = 0; i < total_relas; ++i) {
       relocation_t rel;
       rel.relocation_offset =
           static_cast<std::uintptr_t>(relas_data[i].r_offset);
-      rel.relocation_info = static_cast<std::intptr_t>(relas_data[i].r_info);
+      rel.relocation_info = static_cast<std::uintptr_t>(relas_data[i].r_info);
       rel.relocation_type = get_relocation_type(relas_data[i].r_info);
 
       rel.relocation_symbol_value =
@@ -165,4 +203,3 @@ std::vector<relocation_t> Elf32::get_relocations() {
   }
   return relocations;
 }
-#endif

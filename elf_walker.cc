@@ -70,6 +70,8 @@ int main(int argc, char *argv[]) {
   std::string program((std::string)argv[1]);
   elf_parser::Elf_parser elf_parser(program);
   elf_parser.print_header();
+  // elf_parser.print_section_headers();
+  elf_parser.print_program_hdrs();
 
 #if 0
   std::vector<elf_parser::relocation_t> relocs = elf_parser.get_relocations();

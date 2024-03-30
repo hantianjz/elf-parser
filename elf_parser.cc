@@ -33,8 +33,7 @@ Elf_parser::Elf_parser(std::string &program_path)
     elf32 = new Elf32{m_program};
     break;
   case ELFCLASS64:
-    printf("ELF 64-bit file\n");
-    elf64 = new Elf64{m_program};
+    printf("ELF 64-bit file, NOT SUPPORTED.\n");
     break;
   case ELFCLASSNONE:
   default:
@@ -73,10 +72,7 @@ uint8_t *Elf_parser::load_memory_map() {
   return m_mmap_program;
 }
 
-void Elf_parser::print_header() {
-  if (elf32) {
-    elf32->print_header();
-  } else {
-    elf64->print_header();
-  }
-}
+void Elf_parser::print_header() { elf32->print_header(); }
+
+void Elf_parser::print_section_headers() { elf32->print_section_headers(); }
+void Elf_parser::print_program_hdrs() { elf32->print_program_hdrs(); }
